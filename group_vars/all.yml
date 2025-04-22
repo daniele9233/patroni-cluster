@@ -1,0 +1,33 @@
+patroni_primary_node: dbserver01
+timezone: "Europe/Rome"
+postgres_version: "15"
+etcd_version: "1:3.5.18-1.noble"
+pg_nodes:
+  - { hostname: "dbserver01", ip: "10.116.82.150", etcd_name: "dbserver01", etcd_ip: "10.116.82.150" }
+  - { hostname: "dbserver02", ip: "10.116.82.151", etcd_name: "dbserver02", etcd_ip: "10.116.82.151" }
+  - { hostname: "dbserver03", ip: "10.116.82.152", etcd_name: "dbserver03", etcd_ip: "10.116.82.152" }
+
+patroni_scope: postgres
+patroni_namespace: /pg_cluster/
+
+patroni_nodes:
+  - name: dbserver01
+    ip: 10.116.82.150
+  - name: dbserver02
+    ip: 10.116.82.151
+  - name: dbserver03
+    ip: 10.116.82.152
+
+patroni_users:
+  superuser:
+    username: postgres
+    password: postgres
+  replication:
+    username: replicator
+    password: replicator
+  rewind:
+    username: pgrewind
+    password: pgrewind
+  admin:
+    password: admin
+

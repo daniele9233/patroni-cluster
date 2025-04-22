@@ -1,0 +1,125 @@
+- name: Set timezone
+  ansible.builtin.command: timedatectl set-timezone {{ timezone }}
+
+- name: Disable UFW firewall
+  ansible.builtin.command: ufw disable
+
+- name: Update and upgrade system
+  apt:
+    update_cache: yes
+    upgrade: dist
+
+- name: Install utility packages
+  apt:
+    name:
+      - net-tools
+      - x11-apps
+    state: present
+
+- name: Add /etc/hosts entries
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ item.ip }} {{ item.hostname }}"
+    state: present
+  loop: "{{ pg_nodes }}"
+
+- name: Ensure curl is installed
+  apt:
+    name: curl
+    state: present
+  
+- name: Download Percona repo via curl (workaround bug)
+  shell: curl -fsSL -o /tmp/percona-release.deb https://repo.percona.com/apt/percona-release_latest.noble_all.deb
+
+- name: Install Percona repo
+  apt:
+    deb: /tmp/percona-release.deb
+
+- name: Setup Percona PostgreSQL 15 repo
+  command: percona-release setup ppg-15
+
+- name: Install PostgreSQL 15 and tools
+  apt:
+    name:
+      - percona-postgresql-15
+      - percona-postgresql-15-repack
+      - percona-postgresql-15-pgaudit
+      - percona-pgbackrest
+      - percona-pgbouncer
+      - percona-pgaudit15-set-user
+      - percona-pgbadger
+      - percona-postgresql-15-wal2json
+      - percona-postgresql-contrib
+    state: present
+
+- name: Stop and disable system PostgreSQL service
+  systemd:
+    name: postgresql
+    state: stopped
+    enabled: no
+
+- name: Clear PostgreSQL 15 data directory
+  file:
+    path: /var/lib/postgresql/15/main
+    state: absent
+
+- name: Recreate main directory
+  file:
+    path: /var/lib/postgresql/15/main
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0700'
+
+- name: Install etcd specific version
+  apt:
+    name: "etcd={{ etcd_version }}"
+    state: present
+
+- name: Stop and disable etcd service
+  systemd:
+    name: etcd
+    state: stopped
+    enabled: no
+
+- name: Configure etcd cluster
+  template:
+    src: etcd.conf.yaml.j2
+    dest: /etc/etcd/etcd.conf.yaml
+    mode: '0644'
+
+- name: Include Patroni tasks
+  include_tasks: patroni.yml
+
+- name: Clear PostgreSQL 15 data directory
+  file:
+    path: /var/lib/postgresql/15/main
+    state: absent
+
+- name: Recreate PostgreSQL data directory
+  file:
+    path: /var/lib/postgresql/15/main
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0700'
+
+- name: Clear ETCD data directory
+  file:
+    path: /var/lib/etcd/postgresql
+    state: absent
+
+- name: Recreate ETCD data directory
+  file:
+    path: /var/lib/etcd/postgresql
+    state: directory
+    owner: etcd
+    group: etcd
+    mode: '0700'
+
+- name: Start etcd service
+  systemd:
+    name: etcd
+    state: started
+    enabled: yes
+

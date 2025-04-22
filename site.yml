@@ -1,0 +1,14 @@
+- name: Setup PostgreSQL 15 with Patroni and PgBouncer
+  hosts: all
+  become: true
+  vars_files:
+    - group_vars/all.yml
+
+  pre_tasks:
+    - name: Fail if /var/lib/postgresql is not mounted
+      command: df -h
+      register: df_output
+      failed_when: "'/var/lib/postgresql' not in df_output.stdout"
+
+  roles:
+    - postgresql_cluster

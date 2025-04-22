@@ -1,0 +1,11 @@
+name: '{{ pg_nodes | selectattr("ip", "equalto", ansible_host) | map(attribute="etcd_name") | first }}'
+initial-cluster-token: etcd-cluster
+initial-cluster-state: new
+initial-cluster: {{ pg_nodes | map(attribute='etcd_name') | zip(pg_nodes | map(attribute='etcd_ip')) | map('join', '=http://') | map('regex_replace', '$', ':2380') | join(',') }}
+data-dir: /var/lib/etcd/postgresql
+initial-advertise-peer-urls: http://{{ pg_nodes | selectattr("ip", "equalto", ansible_host) | map(attribute="etcd_ip") | first }}:2380
+listen-peer-urls: http://{{ pg_nodes | selectattr("ip", "equalto", ansible_host) | map(attribute="etcd_ip") | first }}:2380
+advertise-client-urls: http://{{ pg_nodes | selectattr("ip", "equalto", ansible_host) | map(attribute="etcd_ip") | first }}:2379
+listen-client-urls: http://{{ pg_nodes | selectattr("ip", "equalto", ansible_host) | map(attribute="etcd_ip") | first }}:2379,http://localhost:2379
+# Abilita esplicitamente l'API v2
+enable-v2: true
